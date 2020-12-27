@@ -1,33 +1,35 @@
 # vanity-git-commit
 Modify an Git commit to have a desired short commit ID
 
-This little Python script takes the `HEAD` commit from a local Git repository and tries to recreate an almost identical commit whose commit ID starts with a user-defined value. It does so by [salting](https://en.wikipedia.org/wiki/Salt_(cryptography)) the commit message. Since this is a brute-force process, it runs in parallel on all CPU cores. Like vanity license plates, these new commit IDs serve no practical purpose other than to look cool.
+This little Python script takes the `HEAD` commit from a local Git repository and tries to recreate an almost identical commit whose commit ID starts with a user-defined value. It does so by [salting](https://en.wikipedia.org/wiki/Salt_(cryptography)) the commit data. Since this is a brute-force process, it runs in parallel on all CPU cores. Like vanity license plates, these new commit IDs serve no practical purpose other than to look cool.
 
 Example:
 ```
 $ git log -n1
-commit fbf49daafb8aa926ca6ef049b519d526966fafa6 (HEAD -> master)
+commit a84d66cd16025055005126a326a7ad923c5de804 (HEAD -> master)
 Author: Christian Zietz <czietz@xxx.invalid>
-Date:   Sat Dec 26 19:24:06 2020 +0000
+Date:   Sun Dec 27 10:53:12 2020 +0000
 
-    Make desired commit ID a command line parameter
+    Hide salt in metadata
 
-    ... improve error handling and add license banner.
+    This makes it invisble in 'git log', 'git show', or on GitHub.
+    It's unknown if this breaks any third-party Git tools.
+    Use at your own risk!
 
-$ py vanity.py 1234567
-12345670518f5235871775bc6cf2c2012136fe6a
-HEAD is now at 12345670 Make desired commit ID a command line parameter
+$ py vanity.py 4242420
+4242420c6d62111bf65fed8178795360e214d251
+HEAD is now at 4242420 Hide salt in metadata
 
 $ git log -n1
-commit 12345670518f5235871775bc6cf2c2012136fe6a (HEAD -> master, origin/master)
+commit 4242420c6d62111bf65fed8178795360e214d251 (HEAD -> master)
 Author: Christian Zietz <czietz@xxx.invalid>
-Date:   Sat Dec 26 19:24:06 2020 +0000
+Date:   Sun Dec 27 10:53:12 2020 +0000
 
-    Make desired commit ID a command line parameter
+    Hide salt in metadata
 
-    ... improve error handling and add license banner.
-
-    Salt: 0xfed0c7d
+    This makes it invisble in 'git log', 'git show', or on GitHub.
+    It's unknown if this breaks any third-party Git tools.
+    Use at your own risk!
 ```
 
 Notes:
