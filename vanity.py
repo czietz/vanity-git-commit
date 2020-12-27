@@ -54,7 +54,7 @@ def force_hash(salt):
     global meta
     global msg
     commit = meta+salt_fun(salt)+"\n\n"+msg
-    commit = ("commit %d\0"%len(commit))+commit
+    commit = ("commit %d\0"%len(commit.encode("utf-8")))+commit
     commit = commit.encode("utf-8")
     hash = hashlib.sha1(commit).hexdigest()
     if hash.startswith(match):
