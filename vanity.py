@@ -40,17 +40,20 @@ if sys.version_info[0] == 2:
 
 # Format the salt added to the commit message
 def salt_fun(salt):
-    return "\nSalt: "+hex(salt)+"\n"
+    return "\nhiddensalt "+hex(salt)
 
 # Initialization of pool processes: store the original commit data
-def set_commit_info(arg):
-    global ci
-    ci = arg
+def set_commit_info(arg1,arg2):
+    global meta
+    global msg
+    meta = arg1
+    msg  = arg2
 
 # Create a commit object like Git would (adding the salt), hash it and check for a match
 def force_hash(salt):
-    global ci
-    commit = ci+salt_fun(salt)
+    global meta
+    global msg
+    commit = meta+salt_fun(salt)+"\n\n"+msg
     commit = ("commit %d\0"%len(commit))+commit
     commit = commit.encode("utf-8")
     hash = hashlib.sha1(commit).hexdigest()
@@ -67,25 +70,15 @@ if __name__ == "__main__":
 
     # Get info about current HEAD commit
     commit_info = subprocess.check_output("git cat-file -p HEAD".split())
-    if isinstance(commit_info, bytes):
-        commit_info = commit_info.decode("utf-8")
+    commit_info = commit_info.decode("utf-8")
 
     # Parse out info from the commit data returned by Git
-    tree = re.search("tree ([0-9a-f]+)\n",commit_info).group(1)
-    parent = re.search("parent ([0-9a-f]+)\n",commit_info)
-    if parent is not None:
-        parent = parent.group(1)
-    author = re.search("author (.*) <(.*)> (.*)\n",commit_info)
-    committer = re.search("committer (.*) <(.*)> (.*)\n",commit_info)
-    msg = re.search("\n\n(.*)", commit_info, re.DOTALL).group(1)
-    #print(tree)
-    #print(parent)
-    #print(author.groups())
-    #print(committer.groups())
-    #print(msg)
+    (meta,msg) = commit_info.split("\n\n", 1)
+    # print(meta)
+    # print(msg)
 
     # Brute-force hash on multiple CPUs
-    p = multiprocessing.Pool(initializer=set_commit_info, initargs=(commit_info,))
+    p = multiprocessing.Pool(initializer=set_commit_info, initargs=(meta,msg))
     for res in p.imap_unordered(force_hash, range(0,2**31-1), 32768):
         if res is not None:
             (salt,hash) = res
@@ -98,23 +91,10 @@ if __name__ == "__main__":
         sys.exit("FAILED! Found no salt that leads to ID: "+match)
 
     # Prepare a new commit replicating existing one (plus salt)
-    os.environ["GIT_AUTHOR_NAME"] = author.group(1)
-    os.environ["GIT_AUTHOR_EMAIL"] = author.group(2)
-    os.environ["GIT_AUTHOR_DATE"] = author.group(3)
-
-    os.environ["GIT_COMMITTER_NAME"] = committer.group(1)
-    os.environ["GIT_COMMITTER_EMAIL"] = committer.group(2)
-    os.environ["GIT_COMMITTER_DATE"] = committer.group(3)
-
-    msg = msg + salt_fun(salt)
-    msg = msg.encode("utf-8")
-
-    # Create the new commit
-    git_cmd = ["git", "commit-tree", tree]
-    if parent is not None:
-        git_cmd = git_cmd + ["-p", parent]
-    git_proc = subprocess.Popen(git_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    new_hash = git_proc.communicate(msg)[0].decode("utf-8").strip()
+    new_commit = meta+salt_fun(salt)+"\n\n"+msg
+    new_commit = new_commit.encode("utf-8")
+    git_proc = subprocess.Popen("git hash-object -t commit -w --stdin".split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    new_hash = git_proc.communicate(new_commit)[0].decode("utf-8").strip()
     if new_hash != hash:
         sys.exit("FAILED! Expected ID: "+hash+". But got ID:"+new_hash)
 
