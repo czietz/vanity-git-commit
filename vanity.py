@@ -38,9 +38,9 @@ match = sys.argv[1].lower()
 if sys.version_info[0] == 2:
     range = xrange
 
-# Format the salt added to the commit message
-def salt_fun(salt):
-    return "\nhiddensalt "+hex(salt)
+# Add the salt to the commit
+def salt_commit(meta,msg,salt):
+    return meta+"\nhiddensalt "+hex(salt)+"\n\n"+msg
 
 # Initialization of pool processes: store the original commit data
 def set_commit_info(arg1,arg2):
@@ -53,7 +53,7 @@ def set_commit_info(arg1,arg2):
 def force_hash(salt):
     global meta
     global msg
-    commit = meta+salt_fun(salt)+"\n\n"+msg
+    commit = salt_commit(meta,msg,salt)
     commit = ("commit %d\0"%len(commit.encode("utf-8")))+commit
     commit = commit.encode("utf-8")
     hash = hashlib.sha1(commit).hexdigest()
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         sys.exit("FAILED! Found no salt that leads to ID: "+match)
 
     # Prepare a new commit replicating existing one (plus salt)
-    new_commit = meta+salt_fun(salt)+"\n\n"+msg
+    new_commit = salt_commit(meta,msg,salt)
     new_commit = new_commit.encode("utf-8")
     git_proc = subprocess.Popen("git hash-object -t commit -w --stdin".split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     new_hash = git_proc.communicate(new_commit)[0].decode("utf-8").strip()
